@@ -1,0 +1,7 @@
+{
+  "name": "羲光剧游 XiGuang - Game Maker",
+  "description": "A platform to play and create interactive location-based style RPG games using AI.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
