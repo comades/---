@@ -1,23 +1,31 @@
 
-
-import React, { useState, useRef } from 'react';
-import { ViewProps, Post } from '../types';
+import React, { useState, useRef, useEffect } from 'react';
+import { ViewProps, Post, Message } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
 import { Button } from '../components/Button';
-import { User as UserIcon, Coins, Award, Gamepad2, Calendar, Camera, Edit, Heart, Share2, MoreHorizontal, Image as ImageIcon, MessageCircle, PenLine, Check, X, Share, Trash2, Repeat } from 'lucide-react';
+import { User as UserIcon, Coins, Award, Gamepad2, Calendar, Camera, Edit, Heart, Share2, MoreHorizontal, Image as ImageIcon, MessageCircle, PenLine, Check, X, Share, Trash2, Repeat, Mail, Bell, Circle } from 'lucide-react';
+import { compressImage } from '../utils/imageUtils';
 
-export const Profile: React.FC<ViewProps> = ({ setView }) => {
-  const { user, updateProfile, updateName } = useAuth();
+interface ProfileProps extends ViewProps {
+    initialTab?: 'GAMES' | 'CREATIVE_CIRCLE' | 'MESSAGES';
+}
+
+export const Profile: React.FC<ProfileProps> = ({ setView, initialTab = 'GAMES' }) => {
+  const { user, updateProfile, updateName, markMessageAsRead } = useAuth();
   const { games, posts, addPost, deletePost, toggleLikePost } = useGame();
   const [newPostContent, setNewPostContent] = useState('');
-  const [activeTab, setActiveTab] = useState<'GAMES' | 'CREATIVE_CIRCLE'>('GAMES');
+  const [activeTab, setActiveTab] = useState<'GAMES' | 'CREATIVE_CIRCLE' | 'MESSAGES'>(initialTab);
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState('');
   const [activePostMenuId, setActivePostMenuId] = useState<string | null>(null);
   
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+      setActiveTab(initialTab);
+  }, [initialTab]);
 
   if (!user) {
     return (
@@ -28,18 +36,20 @@ export const Profile: React.FC<ViewProps> = ({ setView }) => {
     );
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'banner') => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'banner') => {
       const file = e.target.files?.[0];
       if (file) {
-          const reader = new FileReader();
-          reader.onload = (ev) => {
+          try {
+              const result = await compressImage(file);
               if (type === 'avatar') {
-                  updateProfile({ avatarUrl: ev.target?.result as string });
+                  updateProfile({ avatarUrl: result });
               } else {
-                  updateProfile({ profileBanner: ev.target?.result as string });
+                  updateProfile({ profileBanner: result });
               }
-          };
-          reader.readAsDataURL(file);
+          } catch (e) {
+              console.error(e);
+              alert("圖片上傳失敗");
+          }
       }
   };
 
@@ -100,6 +110,7 @@ export const Profile: React.FC<ViewProps> = ({ setView }) => {
   const nextLevelExp = user.level * 100;
   const progressPercent = Math.min((user.exp / nextLevelExp) * 100, 100);
   const myGames = games.filter(g => g.author === user.name);
+  const unreadMessagesCount = user.messages?.filter(m => !m.isRead).length || 0;
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12" onClick={() => setActivePostMenuId(null)}>
@@ -221,10 +232,14 @@ export const Profile: React.FC<ViewProps> = ({ setView }) => {
             {/* Content Tabs */}
             <div className="flex space-x-6 border-b border-slate-200 mb-6">
                 <button onClick={() => setActiveTab('GAMES')} className={`pb-3 font-bold text-sm transition-all ${activeTab === 'GAMES' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>我的遊戲 ({myGames.length})</button>
-                <button onClick={() => setActiveTab('CREATIVE_CIRCLE')} className={`pb-3 font-bold text-sm transition-all ${activeTab === 'CREATIVE_CIRCLE' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>創作圈 (Blog)</button>
+                <button onClick={() => setActiveTab('CREATIVE_CIRCLE')} className={`pb-3 font-bold text-sm transition-all ${activeTab === 'CREATIVE_CIRCLE' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>創作圈</button>
+                <button onClick={() => setActiveTab('MESSAGES')} className={`pb-3 font-bold text-sm transition-all flex items-center ${activeTab === 'MESSAGES' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>
+                    訊息通知 
+                    {unreadMessagesCount > 0 && <span className="ml-2 px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px]">{unreadMessagesCount}</span>}
+                </button>
             </div>
 
-            {activeTab === 'GAMES' ? (
+            {activeTab === 'GAMES' && (
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {myGames.length === 0 ? (
                         <div className="col-span-full text-center py-12 bg-white rounded-3xl border border-dashed border-slate-200">
@@ -250,7 +265,9 @@ export const Profile: React.FC<ViewProps> = ({ setView }) => {
                         ))
                     )}
                  </div>
-            ) : (
+            )}
+            
+            {activeTab === 'CREATIVE_CIRCLE' && (
                  <div className="space-y-6">
                      {/* Create Post */}
                      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
@@ -340,6 +357,38 @@ export const Profile: React.FC<ViewProps> = ({ setView }) => {
                          </div>
                      ))}
                  </div>
+            )}
+
+            {activeTab === 'MESSAGES' && (
+                <div className="space-y-4">
+                    {user.messages && user.messages.length > 0 ? (
+                        user.messages.map((msg: Message) => (
+                            <div key={msg.id} 
+                                onClick={() => markMessageAsRead(msg.id)}
+                                className={`bg-white rounded-2xl shadow-sm border p-4 cursor-pointer transition-all hover:shadow-md ${msg.isRead ? 'border-slate-200' : 'border-indigo-200 bg-indigo-50/30'}`}
+                            >
+                                <div className="flex items-start justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                        {!msg.isRead && <div className="w-2 h-2 rounded-full bg-red-500"></div>}
+                                        <h3 className={`font-bold text-slate-800 ${!msg.isRead ? 'text-indigo-900' : ''}`}>{msg.title}</h3>
+                                    </div>
+                                    <span className="text-xs text-slate-400">{new Date(msg.date).toLocaleDateString()}</span>
+                                </div>
+                                <p className="text-sm text-slate-600 whitespace-pre-wrap">{msg.content}</p>
+                                <div className="mt-2 pt-2 border-t border-slate-100 flex justify-between items-center text-xs text-slate-400">
+                                    <span>From: {msg.sender}</span>
+                                    {msg.type === 'notification' && <Bell size={12} />}
+                                    {msg.type === 'system' && <Mail size={12} />}
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-slate-200">
+                            <Mail className="mx-auto text-slate-300 mb-2" size={32}/>
+                            <p className="text-slate-500">暫無訊息</p>
+                        </div>
+                    )}
+                </div>
             )}
       </div>
     </div>

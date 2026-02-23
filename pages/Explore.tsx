@@ -1,10 +1,71 @@
 
-
 import React, { useState } from 'react';
 import { ViewProps, Game, Article } from '../types';
 import { GameCard } from '../components/GameCard';
 import { useGame } from '../contexts/GameContext';
 import { Search, ChevronRight, Flame, Trophy, Map, Headphones, Crown, Sparkles, Clock, Star } from 'lucide-react';
+
+const GameRow: React.FC<{ games: Game[], onPlay: (game: Game) => void }> = ({ games, onPlay }) => (
+  <div className="flex overflow-x-auto space-x-4 pb-4 -mx-4 px-4 scrollbar-hide snap-x animate-in fade-in slide-in-from-right-4 duration-300">
+    {games.length > 0 ? games.map((game) => (
+      <div key={game.id} className="w-[280px] flex-shrink-0 snap-center">
+        <GameCard game={game} onClick={() => onPlay(game)} />
+      </div>
+    )) : (
+      <div className="text-slate-400 text-sm py-12 w-full text-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+        此分類尚無內容
+      </div>
+    )}
+  </div>
+);
+
+const ArticleCard: React.FC<{ article: Article }> = ({ article }) => (
+  <div className="flex-shrink-0 w-[260px] group cursor-pointer">
+    <div className="relative aspect-[16/9] overflow-hidden rounded-xl mb-3">
+      <img 
+        src={article.imageUrl} 
+        alt={article.title}
+        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" 
+      />
+      <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm text-white text-[10px] px-2 py-0.5 rounded-full">
+        {article.category}
+      </div>
+    </div>
+    <h3 className="font-bold text-slate-800 text-sm leading-snug group-hover:text-indigo-600 transition-colors line-clamp-2">
+      {article.title}
+    </h3>
+    <p className="text-xs text-slate-400 mt-1 flex justify-between">
+        <span>{article.date}</span>
+        {article.author && <span>by {article.author}</span>}
+    </p>
+  </div>
+);
+
+const TabButton: React.FC<{ 
+  active: boolean; 
+  onClick: () => void; 
+  label: string; 
+  icon: any;
+  colorClass: string;
+}> = ({ 
+  active, 
+  onClick, 
+  label, 
+  icon: Icon,
+  colorClass
+}) => (
+  <button
+    onClick={onClick}
+    className={`flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-bold transition-all border ${
+      active 
+        ? `${colorClass} text-white shadow-md border-transparent scale-105` 
+        : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+    }`}
+  >
+    <Icon size={14} />
+    <span>{label}</span>
+  </button>
+);
 
 export const Explore: React.FC<ViewProps> = ({ setCurrentGame, setView }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -19,9 +80,9 @@ export const Explore: React.FC<ViewProps> = ({ setCurrentGame, setView }) => {
   // Filter Logic
   const filterGames = (games: Game[]) => {
     return games.filter(game => 
-      game.title.includes(searchTerm) || 
-      game.description.includes(searchTerm) ||
-      game.author.includes(searchTerm)
+      game.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      game.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      game.author.toLowerCase().includes(searchTerm.toLowerCase())
     );
   };
 
@@ -43,79 +104,25 @@ export const Explore: React.FC<ViewProps> = ({ setCurrentGame, setView }) => {
   // Sort helpers
   // Recommended: Filter by isRecommended flag
   const getRecommended = (list: Game[]) => list.filter(g => g.isRecommended);
-  // Popular: Sort by Rating (desc)
-  const getPopular = (list: Game[]) => [...list].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+  
+  // Popular: Sort by Rating (desc), fallback to PlayCount
+  const getPopular = (list: Game[]) => [...list].sort((a, b) => {
+      const ratingDiff = (b.rating || 0) - (a.rating || 0);
+      if (ratingDiff !== 0) return ratingDiff;
+      return (b.playCount || 0) - (a.playCount || 0);
+  });
+  
   // Newest: Sort by createdAt (desc)
-  const getNewest = (list: Game[]) => [...list].sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime());
+  const getNewest = (list: Game[]) => [...list].sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+  });
 
   const handlePlay = (game: any) => {
     setCurrentGame(game);
     setView('PLAY');
   };
-
-  // --- Components ---
-
-  const GameRow = ({ games }: { games: Game[] }) => (
-    <div className="flex overflow-x-auto space-x-4 pb-4 -mx-4 px-4 scrollbar-hide snap-x animate-in fade-in slide-in-from-right-4 duration-300">
-      {games.length > 0 ? games.map((game) => (
-        <div key={game.id} className="w-[280px] flex-shrink-0 snap-center">
-          <GameCard game={game} onClick={() => handlePlay(game)} />
-        </div>
-      )) : (
-        <div className="text-slate-400 text-sm py-12 w-full text-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-          此分類尚無內容
-        </div>
-      )}
-    </div>
-  );
-
-  const ArticleCard = ({ article }: { article: Article }) => (
-    <div className="flex-shrink-0 w-[260px] group cursor-pointer">
-      <div className="relative aspect-[16/9] overflow-hidden rounded-xl mb-3">
-        <img 
-          src={article.imageUrl} 
-          alt={article.title}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" 
-        />
-        <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm text-white text-[10px] px-2 py-0.5 rounded-full">
-          {article.category}
-        </div>
-      </div>
-      <h3 className="font-bold text-slate-800 text-sm leading-snug group-hover:text-indigo-600 transition-colors line-clamp-2">
-        {article.title}
-      </h3>
-      <p className="text-xs text-slate-400 mt-1 flex justify-between">
-          <span>{article.date}</span>
-          {article.author && <span>by {article.author}</span>}
-      </p>
-    </div>
-  );
-
-  const TabButton = ({ 
-    active, 
-    onClick, 
-    label, 
-    icon: Icon,
-    colorClass
-  }: { 
-    active: boolean; 
-    onClick: () => void; 
-    label: string; 
-    icon: any;
-    colorClass: string;
-  }) => (
-    <button
-      onClick={onClick}
-      className={`flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-bold transition-all border ${
-        active 
-          ? `${colorClass} text-white shadow-md border-transparent scale-105` 
-          : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
-      }`}
-    >
-      <Icon size={14} />
-      <span>{label}</span>
-    </button>
-  );
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
@@ -218,9 +225,9 @@ export const Explore: React.FC<ViewProps> = ({ setCurrentGame, setView }) => {
            
            {/* Adventure Content */}
            <div className="min-h-[280px]">
-              {adventureTab === 'rec' && <GameRow games={getRecommended(adventureGames)} />}
-              {adventureTab === 'pop' && <GameRow games={getPopular(adventureGames)} />}
-              {adventureTab === 'new' && <GameRow games={getNewest(adventureGames)} />}
+              {adventureTab === 'rec' && <GameRow games={getRecommended(adventureGames)} onPlay={handlePlay} />}
+              {adventureTab === 'pop' && <GameRow games={getPopular(adventureGames)} onPlay={handlePlay} />}
+              {adventureTab === 'new' && <GameRow games={getNewest(adventureGames)} onPlay={handlePlay} />}
            </div>
         </div>
 
@@ -265,9 +272,9 @@ export const Explore: React.FC<ViewProps> = ({ setCurrentGame, setView }) => {
 
            {/* Guide Content */}
            <div className="min-h-[280px]">
-              {guideTab === 'rec' && <GameRow games={getRecommended(guideGames)} />}
-              {guideTab === 'pop' && <GameRow games={getPopular(guideGames)} />}
-              {guideTab === 'new' && <GameRow games={getNewest(guideGames)} />}
+              {guideTab === 'rec' && <GameRow games={getRecommended(guideGames)} onPlay={handlePlay} />}
+              {guideTab === 'pop' && <GameRow games={getPopular(guideGames)} onPlay={handlePlay} />}
+              {guideTab === 'new' && <GameRow games={getNewest(guideGames)} onPlay={handlePlay} />}
            </div>
         </div>
 
@@ -297,6 +304,7 @@ export const Explore: React.FC<ViewProps> = ({ setCurrentGame, setView }) => {
                       <img 
                         src={`https://picsum.photos/seed/${game.coverImageKeyword}/200/200`} 
                         className="w-20 h-20 rounded-lg object-cover flex-shrink-0 bg-slate-800"
+                        alt={game.title}
                       />
                       <div className="overflow-hidden">
                         <h3 className="text-white font-bold text-lg truncate">{game.title}</h3>

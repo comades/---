@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'neo-chinese';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
 }
@@ -21,7 +21,8 @@ export const Button: React.FC<ButtonProps> = ({
     primary: "bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-500/30 focus:ring-indigo-500 border border-transparent",
     secondary: "bg-pink-500 text-white hover:bg-pink-600 shadow-lg shadow-pink-500/30 focus:ring-pink-500 border border-transparent",
     outline: "bg-transparent text-slate-700 border-2 border-slate-200 hover:border-indigo-500 hover:text-indigo-600",
-    ghost: "bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+    ghost: "bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+    'neo-chinese': "bg-[#1A1C23] text-[#D4AF37] border border-[#8A7339]/40 hover:bg-[#D4AF37] hover:text-[#0F1115] transition-all duration-500 font-bold tracking-[0.2em] uppercase"
   };
 
   const sizes = {
@@ -33,6 +34,7 @@ export const Button: React.FC<ButtonProps> = ({
   return (
     <button 
       className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
+      style={variant === 'neo-chinese' ? { clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)' } : {}}
       disabled={disabled || isLoading}
       {...props}
     >

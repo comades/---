@@ -3,6 +3,8 @@
 export interface Choice {
   text: string;
   nextSceneId: string;
+  sourceDirection?: 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
+  targetDirection?: 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
 }
 
 export type ModuleType = 
@@ -11,12 +13,17 @@ export type ModuleType =
   | 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO' 
   | 'AR_RECOGNIZE' | 'AR_TRANSPARENT'
   | 'ANS_TEXT' | 'ANS_SINGLE' | 'ANS_MULTI' | 'ANS_NUMBER' | 'ANS_IMAGE' | 'ANS_PHOTO' | 'ANS_VOICE' | 'ANS_AR'
-  | 'HINT';
+  | 'HINT'
+  | 'PUZZLE_JIGSAW';
 
 export interface GameModule {
   id: string;
   type: ModuleType;
   data: any; // Dynamic data based on type
+  // For STORY_DIALOGUE:
+  // style: 'RPG' | 'CHAT'
+  // backgroundImage?: string (Asset URL)
+  // lines: { char: string, text: string, audio?: string }[]
 }
 
 export interface Scene {
@@ -104,6 +111,16 @@ export interface Post {
   createdAt: string;
 }
 
+export interface Message {
+  id: string;
+  title: string;
+  content: string;
+  sender: string;
+  date: string;
+  isRead: boolean;
+  type: 'system' | 'notification' | 'alert';
+}
+
 export interface User {
   id: string;
   name: string;
@@ -120,6 +137,9 @@ export interface User {
   isPro?: boolean; // New: Subscription status
   followers: number; // New
   following: number; // New
+  status?: 'active' | 'banned'; // New
+  role?: 'user' | 'creator' | 'admin'; // New
+  messages?: Message[]; // New: User inbox
 }
 
 export interface Article {
@@ -131,9 +151,10 @@ export interface Article {
   date: string; // Publication date
   endDate?: string; // Auto-takedown date (optional)
   author?: string;
-  content?: string; // Full content or summary
+  content?: string; // Markdown content
   isPublished: boolean;
   views?: number; // New
+  deletedAt?: string | null; // New: For soft delete
 }
 
 export interface Course {
@@ -145,9 +166,49 @@ export interface Course {
   isLocked: boolean;
   completed: boolean;
   imageKeyword: string;
+  content?: string; // Markdown content
+  videoUrl?: string; // New: Video upload
 }
 
-export type ViewState = 'HOME' | 'EXPLORE' | 'CREATE' | 'PLAY' | 'LOGIN' | 'PROFILE' | 'LEADERBOARD' | 'ACADEMY' | 'ADMIN';
+export interface Certificate {
+    id: string;
+    title: string;
+    description: string;
+    imageUrl?: string;
+    requiredCourseIds: string[];
+    recipients?: { userId: string, date: string }[];
+}
+
+export interface ExamQuestion {
+    id: string;
+    text: string;
+    options: string[];
+    correctIndex: number;
+}
+
+export interface Exam {
+    id: string;
+    title: string;
+    courseId?: string;
+    durationMinutes: number;
+    passingScore: number;
+    questions: ExamQuestion[];
+    participants?: number;
+}
+
+export interface LevelConfig {
+    level: number;
+    expRequired: number;
+    title: string;
+}
+
+export interface SystemSettings {
+    levels: LevelConfig[];
+    basePointsPerGame: number;
+    baseExpPerGame: number;
+}
+
+export type ViewState = 'HOME' | 'EXPLORE' | 'CREATE' | 'PLAY' | 'LOGIN' | 'PROFILE' | 'PROFILE_MESSAGES' | 'LEADERBOARD' | 'ACADEMY' | 'ADMIN';
 
 export interface ViewProps {
   setView: (view: ViewState) => void;
