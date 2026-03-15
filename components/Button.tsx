@@ -4,6 +4,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'neo-chinese';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
+  fullWidth?: boolean;
 }
 
 export const Button: React.FC<ButtonProps> = ({ 
@@ -12,6 +13,7 @@ export const Button: React.FC<ButtonProps> = ({
   size = 'md', 
   className = '', 
   isLoading = false,
+  fullWidth = false,
   disabled,
   ...props 
 }) => {
@@ -31,9 +33,11 @@ export const Button: React.FC<ButtonProps> = ({
     lg: "px-8 py-3.5 text-lg"
   };
 
+  const widthClass = fullWidth ? "w-full" : "";
+
   return (
     <button 
-      className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
+      className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${widthClass} ${className}`}
       style={variant === 'neo-chinese' ? { clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)' } : {}}
       disabled={disabled || isLoading}
       {...props}

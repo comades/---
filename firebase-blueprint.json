@@ -1,0 +1,53 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile data",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "avatarId": { "type": "number" },
+        "points": { "type": "number" },
+        "level": { "type": "number" },
+        "exp": { "type": "number" },
+        "joinedDate": { "type": "string" },
+        "gamesPlayed": { "type": "number" },
+        "gamesCreated": { "type": "number" },
+        "role": { "type": "string" },
+        "status": { "type": "string" },
+        "isAdmin": { "type": "boolean" },
+        "language": { "type": "string" }
+      },
+      "required": ["id", "name", "points", "level", "exp", "role", "status"]
+    },
+    "SystemSettings": {
+      "title": "SystemSettings",
+      "description": "System-wide settings",
+      "type": "object",
+      "properties": {
+        "geminiApiKey": { "type": "string" }
+      }
+    },
+    "Translations": {
+      "title": "Translations",
+      "description": "Internationalization data",
+      "type": "object",
+      "properties": {}
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "system/settings": {
+      "schema": "SystemSettings",
+      "description": "Global settings"
+    },
+    "system/translations": {
+      "schema": "Translations",
+      "description": "App translations"
+    }
+  }
+}

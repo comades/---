@@ -10,16 +10,26 @@
         theme: {
           extend: {
             fontFamily: {
-              sans: ['"Noto Serif TC"', 'serif'],
-              serif: ['"Noto Serif TC"', 'serif'],
+              sans: ['"GenWanMin"', '"源雲明體"', '"Noto Serif TC"', 'serif'],
+              serif: ['"GenWanMin"', '"源雲明體"', '"Noto Serif TC"', 'serif'],
             }
           }
         }
       }
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <script type="text/javascript">
+      window._AMapSecurityConfig = {
+        securityJsCode: 'YOUR_GAODE_SECURITY_CODE',
+      }
+    </script>
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=YOUR_GAODE_API_KEY"></script>
     <style>
-        body { font-family: 'Noto Serif TC', serif; }
+        @font-face {
+            font-family: 'GenWanMin';
+            src: local('GenWanMin'), local('源雲明體');
+        }
+        body { font-family: 'GenWanMin', '源雲明體', 'Noto Serif TC', serif; }
     </style>
   <script type="importmap">
 {

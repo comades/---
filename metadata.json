@@ -1,6 +1,6 @@
 {
   "name": "羲光剧游 XiGuang - Game Maker",
-  "description": "A platform to play and create interactive location-based style RPG games using AI.",
+  "description": "A platform to play and create interactive games. Login required for all features including playing and creating games. Supports WeChat and Phone login.",
   "requestFramePermissions": [
     "geolocation",
     "camera",

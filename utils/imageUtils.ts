@@ -29,7 +29,12 @@ export const compressImage = (file: File): Promise<string> => {
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 ctx?.drawImage(img, 0, 0, width, height);
-                resolve(canvas.toDataURL('image/jpeg', 0.7));
+                
+                if (file.type === 'image/png') {
+                    resolve(canvas.toDataURL('image/png'));
+                } else {
+                    resolve(canvas.toDataURL('image/jpeg', 0.7));
+                }
             };
             img.onerror = (err) => reject(err);
         };

@@ -1,0 +1,13 @@
+{
+  "navbar": {
+    "home": "首页",
+    "explore": "探索",
+    "create": "创作",
+    "login": "登录",
+    "profile": "个人档案"
+  },
+  "footer": {
+    "copyright": "羲光剧游 XiGuang &copy; {{year}}",
+    "poweredBy": "由 Google Gemini 2.5 驱动"
+  }
+}

@@ -4,14 +4,37 @@ import { ViewProps, Post, Message } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useGame } from '../contexts/GameContext';
 import { Button } from '../components/Button';
-import { User as UserIcon, Coins, Award, Gamepad2, Calendar, Camera, Edit, Heart, Share2, MoreHorizontal, Image as ImageIcon, MessageCircle, PenLine, Check, X, Share, Trash2, Repeat, Mail, Bell, Circle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { User as UserIcon, Coins, Award, Gamepad2, Calendar, Camera, Edit, Heart, Share2, MoreHorizontal, Image as ImageIcon, MessageCircle, PenLine, Check, X, Share, Trash2, Repeat, Mail, Bell, Circle, AlertTriangle, CheckCircle } from 'lucide-react';
 import { compressImage } from '../utils/imageUtils';
+
+// --- Generic Confirm Modal ---
+const ConfirmModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = '確認', confirmColor = 'bg-indigo-600 hover:bg-indigo-700' }: any) => {
+    if (!isOpen) return null;
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-white rounded-2xl p-6 shadow-2xl max-w-md w-full">
+                <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center text-indigo-600">
+                    <AlertTriangle className="mr-2" /> {title}
+                </h3>
+                <p className="text-slate-600 mb-6">{message}</p>
+                <div className="flex gap-3">
+                    <button onClick={onCancel} className="flex-1 py-2 rounded-lg bg-slate-100 font-bold text-slate-600 hover:bg-slate-200">取消</button>
+                    <button onClick={onConfirm} className={`flex-1 py-2 rounded-lg font-bold text-white ${confirmColor}`}>
+                        {confirmText}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 interface ProfileProps extends ViewProps {
     initialTab?: 'GAMES' | 'CREATIVE_CIRCLE' | 'MESSAGES';
 }
 
 export const Profile: React.FC<ProfileProps> = ({ setView, initialTab = 'GAMES' }) => {
+  const { t } = useTranslation();
   const { user, updateProfile, updateName, markMessageAsRead } = useAuth();
   const { games, posts, addPost, deletePost, toggleLikePost } = useGame();
   const [newPostContent, setNewPostContent] = useState('');
@@ -19,6 +42,9 @@ export const Profile: React.FC<ProfileProps> = ({ setView, initialTab = 'GAMES' 
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState('');
   const [activePostMenuId, setActivePostMenuId] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState('');
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [postToDelete, setPostToDelete] = useState<string | null>(null);
   
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
@@ -30,8 +56,8 @@ export const Profile: React.FC<ProfileProps> = ({ setView, initialTab = 'GAMES' 
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center flex-col p-4">
-        <p className="text-slate-500 mb-4">請先登入以查看個人檔案</p>
-        <Button onClick={() => setView('LOGIN')}>前往登入</Button>
+        <p className="text-slate-500 mb-4">{t('profile.loginRequired')}</p>
+        <Button onClick={() => setView('LOGIN')}>{t('profile.loginBtn')}</Button>
       </div>
     );
   }
@@ -48,7 +74,8 @@ export const Profile: React.FC<ProfileProps> = ({ setView, initialTab = 'GAMES' 
               }
           } catch (e) {
               console.error(e);
-              alert("圖片上傳失敗");
+              setToastMessage(t('profile.uploadFailed'));
+              setTimeout(() => setToastMessage(''), 3000);
           }
       }
   };
@@ -61,10 +88,9 @@ export const Profile: React.FC<ProfileProps> = ({ setView, initialTab = 'GAMES' 
           userName: user.name,
           userAvatar: user.avatarUrl || `https://api.dicebear.com/7.x/adventurer/svg?seed=${user.avatarId}`,
           content: newPostContent,
-          likes: 0,
-          comments: 0,
+          likes: [],
+          comments: [],
           shares: 0,
-          isLiked: false,
           createdAt: new Date().toISOString()
       };
       addPost(newPost);
@@ -86,7 +112,8 @@ export const Profile: React.FC<ProfileProps> = ({ setView, initialTab = 'GAMES' 
   const handleShareProfile = () => {
       const url = window.location.href;
       navigator.clipboard.writeText(url);
-      alert("個人主頁連結已複製！");
+      setToastMessage("個人主頁連結已複製！");
+      setTimeout(() => setToastMessage(''), 3000);
   };
 
   const handleRepost = (originalPost: Post) => {
@@ -96,21 +123,21 @@ export const Profile: React.FC<ProfileProps> = ({ setView, initialTab = 'GAMES' 
           userName: user.name,
           userAvatar: user.avatarUrl || `https://api.dicebear.com/7.x/adventurer/svg?seed=${user.avatarId}`,
           content: `轉發 @${originalPost.userName} 的動態：\n\n${originalPost.content}`,
-          likes: 0,
-          comments: 0,
+          likes: [],
+          comments: [],
           shares: 0,
-          isLiked: false,
           createdAt: new Date().toISOString()
       };
       addPost(repost);
-      alert("已轉發到創作圈！");
+      setToastMessage(t('profile.reposted'));
+      setTimeout(() => setToastMessage(''), 3000);
   };
 
   // Calculate stats
   const nextLevelExp = user.level * 100;
   const progressPercent = Math.min((user.exp / nextLevelExp) * 100, 100);
-  const myGames = games.filter(g => g.author === user.name);
-  const unreadMessagesCount = user.messages?.filter(m => !m.isRead).length || 0;
+  const myGames = (games || []).filter(g => g.author === user.name && g.status !== 'deleted');
+  const unreadMessagesCount = (user.messages || []).filter(m => !m.isRead).length || 0;
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12" onClick={() => setActivePostMenuId(null)}>
@@ -142,7 +169,7 @@ export const Profile: React.FC<ProfileProps> = ({ setView, initialTab = 'GAMES' 
                      </div>
                  </div>
                  
-                 <div className="mt-4 sm:mt-0 sm:ml-6 flex-1 text-center sm:text-left w-full sm:w-auto">
+                 <div className="mt-4 sm:mt-24 sm:ml-6 flex-1 text-center sm:text-left w-full sm:w-auto">
                      <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
                         {isEditingName ? (
                             <div className="flex items-center bg-white rounded-lg p-1 border border-slate-300">
@@ -180,6 +207,11 @@ export const Profile: React.FC<ProfileProps> = ({ setView, initialTab = 'GAMES' 
                         <Calendar size={14} className="mr-1" />
                         <span>加入於 {new Date(user.joinedDate).toLocaleDateString()}</span>
                      </div>
+                     <div className="mt-2 text-sm text-slate-600">
+                        <p>手機：{user.phone || '未設定'}</p>
+                        <p>收件地址：{user.address || '未設定'}</p>
+                        <p>微信帳號：{user.wechatId || '未設定'}</p>
+                     </div>
                  </div>
 
                  <div className="mt-4 sm:mt-0 flex gap-2">
@@ -199,7 +231,7 @@ export const Profile: React.FC<ProfileProps> = ({ setView, initialTab = 'GAMES' 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
                     <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs font-bold text-slate-400 uppercase">Level</span>
+                        <span className="text-xs font-bold text-slate-400 uppercase">等級</span>
                         <span className="text-indigo-600 font-black text-xl">{user.level}</span>
                     </div>
                     <div className="w-full bg-slate-100 rounded-full h-2">
@@ -210,7 +242,7 @@ export const Profile: React.FC<ProfileProps> = ({ setView, initialTab = 'GAMES' 
 
                 <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex items-center justify-between">
                     <div>
-                        <p className="text-xs font-bold text-slate-400 uppercase">羲光點數 (XiPoints)</p>
+                        <p className="text-xs font-bold text-slate-400 uppercase">羲光點數</p>
                         <p className="text-2xl font-black text-yellow-500">{user.points}</p>
                     </div>
                     <div className="h-10 w-10 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600">
@@ -220,7 +252,7 @@ export const Profile: React.FC<ProfileProps> = ({ setView, initialTab = 'GAMES' 
 
                 <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex items-center justify-between">
                     <div>
-                        <p className="text-xs font-bold text-slate-400 uppercase">Achievements</p>
+                        <p className="text-xs font-bold text-slate-400 uppercase">成就</p>
                         <p className="text-2xl font-black text-indigo-600">3</p>
                     </div>
                     <div className="h-10 w-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600">
@@ -230,10 +262,10 @@ export const Profile: React.FC<ProfileProps> = ({ setView, initialTab = 'GAMES' 
             </div>
 
             {/* Content Tabs */}
-            <div className="flex space-x-6 border-b border-slate-200 mb-6">
-                <button onClick={() => setActiveTab('GAMES')} className={`pb-3 font-bold text-sm transition-all ${activeTab === 'GAMES' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>我的遊戲 ({myGames.length})</button>
-                <button onClick={() => setActiveTab('CREATIVE_CIRCLE')} className={`pb-3 font-bold text-sm transition-all ${activeTab === 'CREATIVE_CIRCLE' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>創作圈</button>
-                <button onClick={() => setActiveTab('MESSAGES')} className={`pb-3 font-bold text-sm transition-all flex items-center ${activeTab === 'MESSAGES' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>
+            <div className="flex space-x-6 border-b border-slate-200 mb-6 overflow-x-auto no-scrollbar">
+                <button onClick={() => setActiveTab('GAMES')} className={`pb-3 font-bold text-sm transition-all whitespace-nowrap ${activeTab === 'GAMES' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>我的遊戲 ({myGames.length})</button>
+                <button onClick={() => setActiveTab('CREATIVE_CIRCLE')} className={`pb-3 font-bold text-sm transition-all whitespace-nowrap ${activeTab === 'CREATIVE_CIRCLE' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>創作圈</button>
+                <button onClick={() => setActiveTab('MESSAGES')} className={`pb-3 font-bold text-sm transition-all whitespace-nowrap flex items-center ${activeTab === 'MESSAGES' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>
                     訊息通知 
                     {unreadMessagesCount > 0 && <span className="ml-2 px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px]">{unreadMessagesCount}</span>}
                 </button>
@@ -247,18 +279,22 @@ export const Profile: React.FC<ProfileProps> = ({ setView, initialTab = 'GAMES' 
                             <Button variant="secondary" onClick={() => setView('CREATE')}>立即創作</Button>
                         </div>
                     ) : (
-                        myGames.map(game => (
+                        (myGames || []).map(game => (
                             <div key={game.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex gap-4 hover:shadow-md transition-shadow">
-                                <img src={game.coverImageKeyword.startsWith('data:') ? game.coverImageKeyword : `https://picsum.photos/seed/${game.coverImageKeyword || game.id}/100/100`} className="w-20 h-20 rounded-xl object-cover bg-slate-100 flex-shrink-0" />
+                                <img src={game.coverImageKeyword?.startsWith('data:') ? game.coverImageKeyword : `https://picsum.photos/seed/${game.coverImageKeyword || game.id}/100/100`} className="w-20 h-20 rounded-xl object-cover bg-slate-100 flex-shrink-0" />
                                 <div>
                                     <h3 className="font-bold text-slate-900">{game.title}</h3>
                                     <p className="text-xs text-slate-500 line-clamp-2 mt-1 mb-2">{game.description}</p>
                                     <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${
                                         game.status === 'published' ? 'bg-green-100 text-green-700' :
                                         game.status === 'review' ? 'bg-yellow-100 text-yellow-700' :
-                                        game.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500'
+                                        game.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                                        game.status === 'off_shelf' ? 'bg-slate-200 text-slate-600' : 'bg-slate-100 text-slate-500'
                                     }`}>
-                                        {game.status === 'published' ? '已發佈' : game.status === 'review' ? '審核中' : game.status === 'rejected' ? '退回' : '草稿'}
+                                        {game.status === 'published' ? '已發佈' : 
+                                         game.status === 'review' ? '審核中' : 
+                                         game.status === 'rejected' ? '退回' : 
+                                         game.status === 'off_shelf' ? '已下架' : '草稿'}
                                     </span>
                                 </div>
                             </div>
@@ -296,12 +332,12 @@ export const Profile: React.FC<ProfileProps> = ({ setView, initialTab = 'GAMES' 
                      </div>
 
                      {/* Post Feed */}
-                     {posts.map(post => (
+                     {(posts || []).map(post => (
                          <div key={post.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 relative">
                              <div className="flex justify-between items-start mb-3">
                                  <div className="flex items-center gap-3">
                                      <div className="h-10 w-10 rounded-full bg-slate-100 overflow-hidden cursor-pointer">
-                                         <img src={post.userAvatar} className="h-full w-full object-cover" />
+                                         <img src={post.userAvatar || undefined} className="h-full w-full object-cover" />
                                      </div>
                                      <div>
                                          <p className="font-bold text-slate-900 text-sm cursor-pointer hover:text-indigo-600">{post.userName}</p>
@@ -318,7 +354,7 @@ export const Profile: React.FC<ProfileProps> = ({ setView, initialTab = 'GAMES' 
                                     {activePostMenuId === post.id && (
                                         <div className="absolute right-0 top-8 w-32 bg-white rounded-lg shadow-lg border border-slate-100 overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-200">
                                             <button 
-                                                onClick={() => { if(confirm("確定刪除此動態？")) deletePost(post.id); }}
+                                                onClick={() => { setPostToDelete(post.id); setConfirmModalOpen(true); setActivePostMenuId(null); }}
                                                 className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-bold flex items-center"
                                             >
                                                 <Trash2 size={14} className="mr-2"/> 刪除
@@ -329,19 +365,19 @@ export const Profile: React.FC<ProfileProps> = ({ setView, initialTab = 'GAMES' 
                              </div>
                              <p className="text-slate-700 text-sm mb-4 whitespace-pre-wrap leading-relaxed">{post.content}</p>
                              <div className="flex items-center gap-6 pt-3 border-t border-slate-100 text-slate-500 text-sm font-medium">
-                                 <button onClick={() => toggleLikePost(post.id)} className={`flex items-center transition-colors group ${post.isLiked ? 'text-red-500' : 'hover:text-red-500'}`}>
+                                 <button onClick={() => toggleLikePost(post.id, user.id)} className={`flex items-center transition-colors group ${post.likes.includes(user.id) ? 'text-red-500' : 'hover:text-red-500'}`}>
                                      <div className="p-1.5 rounded-full group-hover:bg-red-50 mr-1.5 transition-colors">
-                                         <Heart size={18} className={post.isLiked ? "fill-red-500" : ""} />
+                                         <Heart size={18} className={post.likes.includes(user.id) ? "fill-red-500" : ""} />
                                      </div> 
-                                     {post.likes}
+                                     {post.likes.length}
                                  </button>
-                                 <button onClick={() => alert("留言功能開發中")} className="flex items-center hover:text-blue-500 transition-colors group">
+                                 <button onClick={() => { setToastMessage("留言功能開發中"); setTimeout(() => setToastMessage(''), 3000); }} className="flex items-center hover:text-blue-500 transition-colors group">
                                      <div className="p-1.5 rounded-full group-hover:bg-blue-50 mr-1.5 transition-colors">
                                          <MessageCircle size={18} />
                                      </div> 
-                                     {post.comments || 0}
+                                     {post.comments ? post.comments.length : 0}
                                  </button>
-                                 <button className="flex items-center hover:text-green-500 transition-colors group" onClick={() => { navigator.clipboard.writeText("Post Link"); alert("連結已複製！"); }}>
+                                 <button className="flex items-center hover:text-green-500 transition-colors group" onClick={() => { navigator.clipboard.writeText("Post Link"); setToastMessage("連結已複製！"); setTimeout(() => setToastMessage(''), 3000); }}>
                                      <div className="p-1.5 rounded-full group-hover:bg-green-50 mr-1.5 transition-colors">
                                          <Share2 size={18} />
                                      </div> 
@@ -362,7 +398,7 @@ export const Profile: React.FC<ProfileProps> = ({ setView, initialTab = 'GAMES' 
             {activeTab === 'MESSAGES' && (
                 <div className="space-y-4">
                     {user.messages && user.messages.length > 0 ? (
-                        user.messages.map((msg: Message) => (
+                        (user.messages || []).map((msg: Message) => (
                             <div key={msg.id} 
                                 onClick={() => markMessageAsRead(msg.id)}
                                 className={`bg-white rounded-2xl shadow-sm border p-4 cursor-pointer transition-all hover:shadow-md ${msg.isRead ? 'border-slate-200' : 'border-indigo-200 bg-indigo-50/30'}`}
@@ -391,6 +427,27 @@ export const Profile: React.FC<ProfileProps> = ({ setView, initialTab = 'GAMES' 
                 </div>
             )}
       </div>
+
+      <ConfirmModal 
+          isOpen={confirmModalOpen}
+          title="確認刪除"
+          message="確定要刪除此動態嗎？此操作無法復原！"
+          onConfirm={() => {
+              if (postToDelete) deletePost(postToDelete);
+              setConfirmModalOpen(false);
+              setPostToDelete(null);
+          }}
+          onCancel={() => { setConfirmModalOpen(false); setPostToDelete(null); }}
+          confirmText="刪除"
+          confirmColor="bg-red-600 hover:bg-red-700"
+      />
+
+      {toastMessage && (
+          <div className="fixed bottom-4 right-4 bg-slate-800 text-white px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-5 z-50">
+              <CheckCircle size={20} className="text-green-400" />
+              <span className="font-bold">{toastMessage}</span>
+          </div>
+      )}
     </div>
   );
 };

@@ -1,0 +1,13 @@
+{
+  "navbar": {
+    "home": "Home",
+    "explore": "Explore",
+    "create": "Create",
+    "login": "Login",
+    "profile": "Profile"
+  },
+  "footer": {
+    "copyright": "XiGuang &copy; {{year}}",
+    "poweredBy": "Powered by Google Gemini 2.5"
+  }
+}

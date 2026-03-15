@@ -10,6 +10,12 @@ const MOCK_CREATORS = [
   { id: 5, name: "NovelAI", score: 6200, avatar: 15 },
 ];
 
+const MOCK_RISING = [
+  { id: 6, name: "NewCreator", score: 4500, avatar: 1 },
+  { id: 7, name: "FastLearner", score: 4200, avatar: 3 },
+  { id: 8, name: "RisingStar", score: 3800, avatar: 9 },
+];
+
 const MOCK_PLAYERS = [
   { id: 1, name: "ExplorerOne", score: 880, avatar: 20 },
   { id: 2, name: "SpeedRunner", score: 750, avatar: 22 },
@@ -27,7 +33,7 @@ const MOCK_STUDENTS = [
 ];
 
 export const Leaderboard: React.FC<ViewProps> = () => {
-  const [activeTab, setActiveTab] = useState<'creators' | 'players' | 'students'>('creators');
+  const [activeTab, setActiveTab] = useState<'creators' | 'players' | 'students' | 'rising'>('creators');
 
   let data, title, scoreLabel, headerIcon;
 
@@ -38,9 +44,15 @@ export const Leaderboard: React.FC<ViewProps> = () => {
       scoreLabel = "人氣積分";
       headerIcon = <Flame size={24} className="text-orange-500" />;
       break;
+    case 'rising':
+      data = MOCK_RISING;
+      title = "新秀創作者";
+      scoreLabel = "效率積分";
+      headerIcon = <Star size={24} className="text-yellow-500" />;
+      break;
     case 'players':
       data = MOCK_PLAYERS;
-      title = "最強玩家";
+      title = "最強光光";
       scoreLabel = "冒險點數";
       headerIcon = <Star size={24} className="text-pink-500" />;
       break;
@@ -67,7 +79,7 @@ export const Leaderboard: React.FC<ViewProps> = () => {
             <Trophy className="text-yellow-500 fill-yellow-500" size={32} />
             榮譽殿堂
           </h1>
-          <p className="mt-4 text-slate-600">與全世界的玩家和創作者一較高下</p>
+          <p className="mt-4 text-slate-600">與全世界的光光和創作者一較高下</p>
         </div>
 
         {/* Tabs */}
@@ -83,6 +95,17 @@ export const Leaderboard: React.FC<ViewProps> = () => {
             >
               <Flame size={16} className="mr-2" />
               人氣創作者
+            </button>
+            <button
+              onClick={() => setActiveTab('rising')}
+              className={`px-4 sm:px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center ${
+                activeTab === 'rising' 
+                  ? 'bg-yellow-500 text-white shadow-md' 
+                  : 'text-slate-500 hover:bg-slate-50'
+              }`}
+            >
+              <Star size={16} className="mr-2" />
+              新秀創作者
             </button>
             <button
               onClick={() => setActiveTab('players')}
@@ -119,7 +142,7 @@ export const Leaderboard: React.FC<ViewProps> = () => {
             <span>{scoreLabel}</span>
           </div>
           <div className="divide-y divide-slate-100">
-            {data.map((item, index) => (
+            {(data || []).map((item, index) => (
               <div 
                 key={item.id} 
                 className="flex items-center justify-between p-4 sm:p-6 hover:bg-slate-50 transition-colors group"

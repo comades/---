@@ -10,14 +10,24 @@ import { Profile } from './pages/Profile';
 import { Leaderboard } from './pages/Leaderboard';
 import { Academy } from './pages/Academy';
 import { Admin } from './pages/Admin';
+import { Shop } from './pages/Shop';
+import { StyleGuide } from './components/StyleGuide';
+import { BottomNav } from './components/BottomNav';
 import { ViewState, Game } from './types';
+import { useTranslation } from 'react-i18next';
+import { LanguageProvider } from './contexts/LanguageContext';
 
 import { useGame } from './contexts/GameContext';
 
+import { useAuth } from './contexts/AuthContext';
+import { Loader2 } from 'lucide-react';
+
 function App() {
-  const [currentView, setView] = useState<ViewState>('HOME');
+  const [currentView, setView] = useState<ViewState>('EXPLORE');
   const [currentGame, setCurrentGame] = useState<Game | null>(null);
   const { games } = useGame();
+  const { t } = useTranslation();
+  const { user, loading } = useAuth();
 
   // Load Data
   useEffect(() => {
@@ -26,13 +36,32 @@ function App() {
     const gameIdParam = params.get('gameId');
 
     if (viewParam === 'PLAY' && gameIdParam && games.length > 0) {
-        const game = games.find(g => g.id === gameIdParam);
+        const game = (games || []).find(g => g.id === gameIdParam);
         if (game) {
             setCurrentGame(game);
             setView('PLAY');
         }
     }
   }, [games]);
+
+  // Enforce Login for specific views
+  useEffect(() => {
+    const publicViews: ViewState[] = ['HOME', 'EXPLORE', 'LEADERBOARD', 'ACADEMY', 'PLAY', 'LOGIN', 'STYLE_GUIDE'];
+    if (!loading && !user && !publicViews.includes(currentView)) {
+      setView('LOGIN');
+    }
+  }, [user, loading, currentView]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 text-indigo-600 animate-spin mx-auto mb-4" />
+          <p className="text-slate-600 font-bold">{t('loading')}</p>
+        </div>
+      </div>
+    );
+  }
 
   // Simple Router Switch
   const renderView = () => {
@@ -63,29 +92,39 @@ function App() {
         return <Academy {...props} />;
       case 'ADMIN':
         return <Admin {...props} />;
+      case 'SHOP':
+        return <Shop {...props} />;
+      case 'STYLE_GUIDE':
+        return <StyleGuide />;
       default:
-        return <Home {...props} />;
+        return <Explore {...props} />;
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-serif text-slate-900">
-      {currentView !== 'PLAY' && currentView !== 'ADMIN' && (
-        <Navbar currentView={currentView} setView={setView} />
-      )}
-      <main className="flex-grow">
-        {renderView()}
-      </main>
-      
-      {currentView !== 'PLAY' && currentView !== 'ADMIN' && currentView !== 'CREATE' && (
-        <footer className="bg-white py-8 border-t border-slate-200 mt-auto">
-          <div className="mx-auto max-w-7xl px-4 text-center text-slate-500 text-sm">
-            <p className="mb-2">羲光剧游 XiGuang &copy; {new Date().getFullYear()}</p>
-            <p>Powered by Google Gemini 2.5</p>
-          </div>
-        </footer>
-      )}
-    </div>
+    <LanguageProvider>
+      <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900">
+        {currentView !== 'PLAY' && currentView !== 'ADMIN' && currentView !== 'STYLE_GUIDE' && (
+          <Navbar currentView={currentView} setView={setView} />
+        )}
+        <main className="flex-grow pb-20 md:pb-0">
+          {renderView()}
+        </main>
+        
+        {currentView !== 'PLAY' && currentView !== 'ADMIN' && currentView !== 'CREATE' && currentView !== 'STYLE_GUIDE' && (
+          <footer className="bg-white py-8 border-t border-slate-200 mt-auto hidden md:block">
+            <div className="mx-auto max-w-7xl px-4 text-center text-slate-500 text-sm">
+              <p className="mb-2">{t('footer.copyright', { year: new Date().getFullYear() })}</p>
+              <p>{t('footer.poweredBy')}</p>
+            </div>
+          </footer>
+        )}
+
+        {currentView !== 'PLAY' && currentView !== 'ADMIN' && currentView !== 'STYLE_GUIDE' && (
+          <BottomNav currentView={currentView} setView={setView} />
+        )}
+      </div>
+    </LanguageProvider>
   );
 }
 

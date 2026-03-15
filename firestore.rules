@@ -1,0 +1,115 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Super Admin Rule
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null && 
+                          request.auth.token.email != null && 
+                          request.auth.token.email == "yhocliff@gmail.com";
+    }
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - id: string (required)
+    //   - name: string (required, 1-100 chars)
+    //   - avatarId: number (optional)
+    //   - points: number (required)
+    //   - level: number (required)
+    //   - exp: number (required)
+    //   - joinedDate: string (optional)
+    //   - gamesPlayed: number (optional)
+    //   - gamesCreated: number (optional)
+    //   - role: string (required, 'user'|'creator'|'admin')
+    //   - status: string (required, 'active'|'banned')
+    //   - isAdmin: boolean (optional)
+    //   - language: string (optional)
+    //
+    // Collection: system
+    // Document ID: settings, translations, dailyQuiz
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        ( (request.auth.token.email != null && request.auth.token.email == "yhocliff@gmail.com") ||
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+        );
+    }
+
+    function isValidUser(data) {
+      // Basic type checks, allowing for missing fields during updates if necessary
+      // but request.resource.data should have them all.
+      // We'll make it slightly more lenient to avoid blocking legitimate updates.
+      return data.id is string &&
+             data.name is string && data.name.size() > 0 &&
+             data.role in ['user', 'creator', 'admin'] &&
+             data.status in ['active', 'banned'];
+    }
+
+    function hasOnlyAllowedFields(data, allowedFields) {
+      return data.keys().hasOnly(allowedFields);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      // Allow any authenticated user to read their own profile, and admins to read all
+      allow get: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin();
+      
+      allow create: if isAuthenticated() && request.auth.uid == userId && isValidUser(request.resource.data);
+      
+      // Allow users to update their own profiles, but prevent self-promotion to admin unless already admin
+      // Also ensure the merged document remains valid
+      allow update: if isAuthenticated() && (request.auth.uid == userId || isAdmin()) && 
+                    (isAdmin() || 
+                     (request.auth.token.email != null && request.auth.token.email == "yhocliff@gmail.com") ||
+                     (request.resource.data.role == resource.data.role && 
+                      request.resource.data.isAdmin == resource.data.isAdmin)) &&
+                    isValidUser(request.resource.data);
+    }
+
+    match /system/{documentId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /games/{gameId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    match /articles/{articleId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /daily_quizzes/{quizId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /test/connection {
+      allow read: if true;
+    }
+  }
+}
